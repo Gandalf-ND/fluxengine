@@ -1,5 +1,5 @@
 #include "globals.h"
-#include "decoders.h"
+#include "decoders/decoders.h"
 
 Bytes decodeFmMfm(
         std::vector<bool>::const_iterator ii, std::vector<bool>::const_iterator end)
@@ -26,7 +26,7 @@ Bytes decodeFmMfm(
     ByteWriter bw(bytes);
 
     int bitcount = 0;
-    uint8_t fifo;
+    uint8_t fifo = 0;
 
     while (ii != end)
     {
@@ -50,4 +50,26 @@ Bytes decodeFmMfm(
     }
 
     return bytes;
+}
+
+void encodeMfm(std::vector<bool>& bits, unsigned& cursor, const Bytes& input)
+{
+    bool lastBit = false;
+    unsigned len = bits.size()-1;
+
+    for (uint8_t b : input)
+    {
+        for (int i=0; i<8; i++)
+        {
+            bool bit = b & 0x80;
+            b <<= 1;
+
+            if (cursor >= len)
+                return;
+            
+            bits[cursor++] = !lastBit && !bit;
+            bits[cursor++] = bit;
+            lastBit = bit;
+        }
+    }
 }

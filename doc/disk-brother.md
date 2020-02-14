@@ -8,7 +8,7 @@ size.
 Different word processors use different disk formats --- the only ones
 supported by FluxEngine are the 120kB and 240kB 3.5" formats. The default
 options are for the 240kB format. For the 120kB format, which is 40 track, do
-`fe-readbrother -s :t=1-79x2`.
+`fluxengine read brother -s :t=1-79x2`.
 
 Apparently about 20% of Brother word processors have alignment issues which
 means that the disks can't be read by FluxEngine (because the tracks on the
@@ -36,7 +36,7 @@ Reading discs
 Just do:
 
 ```
-.obj/fe-readbrother
+fluxengine read brother
 ```
 
 You should end up with a `brother.img` which is 239616 bytes long.
@@ -47,7 +47,7 @@ Writing discs
 Just do:
 
 ```
-.obj/fe-writebrother
+fluxengine write brother
 ```
 
 ...and it'll write a `brother.img` file which is 239616 bytes long to the
@@ -108,9 +108,13 @@ To extract a file, do:
 Wildcards are supported, so use `'*'` for the filename (remember to quote it)
 if you want to extract everything.
 
-This is _extremely experimental_. The data structures I've figured out are
-mostly consistent, but it looks like there's always garbage in the last
-sector of each file, so maybe I'm not getting the file lengths right.
+The files are usually in the format known as WP-1, which aren't well
+supported by modern tools (to nobody's great surprise). Matthias Henckell has
+[reverse engineered the file
+format](https://mathesoft.eu/brother-wp-1-dokumente/) and has produced a
+(Windows-only, but runs in Wine) [tool which will convert these files into
+RTF](https://mathesoft.eu/sdm_downloads/wp2rtf/). This will only work on WP-1
+files.
 
 Any questions? please [get in
 touch](https://github.com/davidgiven/fluxengine/issues/new).
@@ -125,8 +129,8 @@ reverse engineered it to find out.
 
 Standard Linux mtools will access the filesystem image and allow you to move
 files in and out. However, you'll need to change the media type bytes at
-offsets 0x015 and 0x100 from 0x58 to 0xf0 before mtools will touch it. Once
-done, this will work:
+offsets 0x015 and 0x100 from 0x58 to 0xf0 before mtools will touch it. The
+supplied `brother240tool` will do this. Once done, this will work:
 
 ```
 mdir -i brother.img
@@ -136,5 +140,6 @@ mcopy -i brother.img ::brother.doc linux.doc
 The word processor checks the media byte, unfortunately, so you'll need to
 change it back to 0x58 before writing an image to disk.
 
-Converting the equally proprietary file format to something readable is,
-unfortunately, out of scope for FluxEngine.
+The file format is not WP-1, and currently remains completely unknown,
+although it's probably related. If anyone knows anything about this, please
+[get in touch](https://github.com/davidgiven/fluxengine/issues/new).

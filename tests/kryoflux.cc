@@ -3,29 +3,7 @@
 #include <stdlib.h>
 #include "globals.h"
 #include "fluxmap.h"
-#include "kryoflux.h"
-
-struct memstreambuf : std::streambuf
-{
-    memstreambuf(const Bytes& bytes)
-    {
-        this->setg((char*) bytes.begin(), (char*) bytes.begin(), (char*) bytes.end());
-    }
-};
-
-class memstream : public std::istream
-{
-public:
-    memstream(const Bytes& bytes):
-        std::istream(&_buffer),
-        _buffer(bytes)
-    {
-        rdbuf(&_buffer);
-    }
-
-private:
-    memstreambuf _buffer;
-};
+#include "fluxsource/kryoflux.h"
 
 static Bytes operator + (const Bytes& left, const Bytes& right)
 {
@@ -47,8 +25,7 @@ static Bytes operator * (const Bytes& left, size_t count)
 
 static void test_convert(const Bytes& kryofluxbytes, const Bytes& fluxmapbytes)
 {
-    memstream stream(kryofluxbytes);
-    std::unique_ptr<Fluxmap> fluxmap = readStream(stream);
+    std::unique_ptr<Fluxmap> fluxmap = readStream(kryofluxbytes);
 
     if (fluxmap->rawBytes() != fluxmapbytes)
     {
@@ -58,7 +35,7 @@ static void test_convert(const Bytes& kryofluxbytes, const Bytes& fluxmapbytes)
         hexdump(std::cout, fluxmap->rawBytes());
         std::cout << std::endl << "Expected this:" << std::endl;
         hexdump(std::cout, fluxmapbytes);
-        exit(1);
+        abort();
     }
 }
 

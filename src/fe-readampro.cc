@@ -2,32 +2,30 @@
 #include "flags.h"
 #include "reader.h"
 #include "fluxmap.h"
-#include "decoders.h"
+#include "decoders/decoders.h"
 #include "image.h"
 #include "sector.h"
 #include "sectorset.h"
 #include "record.h"
-#include "ibm.h"
-#include <fmt/format.h>
+#include "ibm/ibm.h"
+#include "fmt/format.h"
 
-static StringFlag outputFilename(
-    { "--output", "-o" },
-    "The output image file to write to.",
-    "ampro.img");
+static FlagGroup flags { &readerFlags };
 
 static IntFlag sectorIdBase(
 	{ "--sector-id-base" },
 	"Sector ID of the first sector.",
 	17);
 
-int main(int argc, const char* argv[])
+int mainReadAmpro(int argc, const char* argv[])
 {
 	setReaderDefaultSource(":t=0-79:s=0");
+	setReaderDefaultOutput("ampro.adf");
     setReaderRevolutions(2);
-    Flag::parseFlags(argc, argv);
+    flags.parseFlags(argc, argv);
 
-	IbmMfmDecoder decoder(sectorIdBase);
-	readDiskCommand(decoder, outputFilename);
+	IbmDecoder decoder(sectorIdBase);
+	readDiskCommand(decoder);
     return 0;
 }
 

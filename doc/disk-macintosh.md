@@ -2,9 +2,9 @@ Disk: Macintosh
 ===============
 
 Macintosh disks come in two varieties: the newer 1440kB ones, which are
-perfectly ordinary PC disks you should use `fe-readibm` to read, and the
-older 800kB disks (and 400kB for the single sides ones). They have 80 tracks
-and up to 12 sectors per track.
+perfectly ordinary PC disks you should use `fluxengine read ibm` to read, and
+the older 800kB disks (and 400kB for the single sides ones). They have 80
+tracks and up to 12 sectors per track.
 
 They are also completely insane.
 
@@ -28,8 +28,16 @@ for example the Commodore 64 1541 drive, changed bitrate this way.
 But Macintosh disks used a constant bitrate and changed the speed that the
 disk spun instead to achieve the same effect...
 
-_Anyway_: FluxEngine will read them fine on a conventional drive. Because
-it's clever.
+_Anyway_: FluxEngine will read them fine on conventional drives.
+Because it's clever.
+
+**Big note.** Apparently --- and I'm still getting to the bottom of this ---
+some drives work and some don't. My drives produce about 90% good reads of
+known good disks. One rumour I've heard is that drives sometimes include
+filters which damage the signals at very particular intervals which Mac disks
+use, but frankly this seems unlikely; it could be a software issue at my end
+and I'm investigating. If you have any insight, please [get in
+touch](https://github.com/davidgiven/fluxengine/issues/new).
 
 Reading discs
 -------------
@@ -37,7 +45,7 @@ Reading discs
 Just do:
 
 ```
-.obj/fe-readmac
+fluxengine read mac
 ```
 
 You should end up with an `mac.img` which is 1001888 bytes long (for a normal
@@ -49,6 +57,10 @@ size. FluxEngine chooses to store them in a simple 524 x 12 x 2 x 80 layout,
 with holes where missing sectors should be. This was easiest. If anyone can
 suggest a better way, please [get in
 touch](https://github.com/davidgiven/fluxengine/issues/new).
+
+The 12 bytes of metadata _follow_ the 512 bytes of user payload in the sector
+image. If you don't want it, specify a geometry in the output file with a
+512-byte sectore size like `-o mac.img:c=80:h=1:s=12:b=512`.
 
 Useful references
 -----------------

@@ -2,28 +2,27 @@
 #include "flags.h"
 #include "reader.h"
 #include "fluxmap.h"
-#include "decoders.h"
-#include "brother.h"
+#include "decoders/decoders.h"
+#include "encoders/encoders.h"
+#include "brother/brother.h"
 #include "sector.h"
 #include "sectorset.h"
 #include "image.h"
 #include "record.h"
-#include <fmt/format.h>
+#include "fmt/format.h"
 #include <fstream>
 
-static StringFlag outputFilename(
-    { "--output", "-o" },
-    "The output image file to write to.",
-    "brother.img");
+static FlagGroup flags { &readerFlags };
 
-int main(int argc, const char* argv[])
+int mainReadBrother(int argc, const char* argv[])
 {
 	setReaderDefaultSource(":t=0-81:s=0");
+	setReaderDefaultOutput("brother.img");
     setReaderRevolutions(2);
-    Flag::parseFlags(argc, argv);
+    flags.parseFlags(argc, argv);
 
 	BrotherDecoder decoder;
-	readDiskCommand(decoder, outputFilename);
+	readDiskCommand(decoder);
 
     return 0;
 }

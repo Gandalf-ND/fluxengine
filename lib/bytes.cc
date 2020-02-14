@@ -1,7 +1,8 @@
 #include "globals.h"
 #include "bytes.h"
 #include "fmt/format.h"
-#include "crunch.h"
+#include "common/crunch.h"
+#include <fstream>
 #include <zlib.h>
 
 static std::shared_ptr<std::vector<uint8_t>> createVector(unsigned size)
@@ -168,6 +169,23 @@ Bytes toBytes(
     return bytes;
 }
 
+Bytes Bytes::swab() const
+{
+    Bytes output;
+    ByteWriter bw(output);
+    ByteReader br(*this);
+
+    while (!br.eof())
+    {
+        uint8_t a = br.read_8();
+        uint8_t b = br.read_8();
+        bw.write_8(b);
+        bw.write_8(a);
+    }
+
+    return output;
+}
+
 Bytes Bytes::compress() const
 {
     uLongf destsize = compressBound(size());
@@ -263,6 +281,16 @@ Bytes Bytes::uncrunch() const
     return output;
 }
 
+void Bytes::writeToFile(const std::string& filename) const
+{
+    std::ofstream f(filename, std::ios::out | std::ios::binary);
+    if (!f.is_open())
+        Error() << fmt::format("cannot open output file '{}'", filename);
+
+    f.write((const char*) cbegin(), size());
+    f.close();
+}
+
 ByteReader Bytes::reader() const
 {
     return ByteReader(*this);
@@ -271,6 +299,16 @@ ByteReader Bytes::reader() const
 ByteWriter Bytes::writer()
 {
     return ByteWriter(*this);
+}
+
+ByteWriter& ByteWriter::operator +=(std::istream& stream)
+{
+    Bytes buffer(4096);
+
+    while (stream.read((char*) buffer.begin(), buffer.size()))
+        this->append(buffer);
+    this->append(buffer.slice(0, stream.gcount()));
+    return *this;
 }
 
 void BitWriter::push(uint32_t bits, size_t size)

@@ -2,28 +2,26 @@
 #include "flags.h"
 #include "reader.h"
 #include "fluxmap.h"
-#include "decoders.h"
-#include "amiga.h"
+#include "decoders/decoders.h"
+#include "amiga/amiga.h"
 #include "sector.h"
 #include "sectorset.h"
 #include "image.h"
 #include "record.h"
-#include <fmt/format.h>
+#include "fmt/format.h"
 #include <fstream>
 
-static StringFlag outputFilename(
-    { "--output", "-o" },
-    "The output image file to write to.",
-    "amiga.adf");
+static FlagGroup flags { &readerFlags };
 
-int main(int argc, const char* argv[])
+int mainReadAmiga(int argc, const char* argv[])
 {
 	setReaderDefaultSource(":t=0-79:s=0-1");
+	setReaderDefaultOutput("amiga.adf:c=80:h=2:s=11:b=512");
     setReaderRevolutions(2);
-    Flag::parseFlags(argc, argv);
+    flags.parseFlags(argc, argv);
 
 	AmigaDecoder decoder;
-	readDiskCommand(decoder, outputFilename);
+	readDiskCommand(decoder);
 
     return 0;
 }

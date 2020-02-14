@@ -3,9 +3,9 @@
 #include "protocol.h"
 #include "fluxmap.h"
 #include "bytes.h"
-#include "crunch.h"
+#include "common/crunch.h"
 #include <libusb.h>
-#include <fmt/format.h>
+#include "fmt/format.h"
 
 #define TIMEOUT 5000
 
@@ -149,7 +149,7 @@ nanoseconds_t usbGetRotationalPeriod(void)
     usb_cmd_send(&f, f.f.size);
 
     auto r = await_reply<struct speed_frame>(F_FRAME_MEASURE_SPEED_REPLY);
-    return r->period_ms * 1000;
+    return r->period_ms * 1000000;
 }
 
 static int large_bulk_transfer(int ep, Bytes& bytes)
@@ -202,13 +202,16 @@ void usbTestBulkTransport()
     await_reply<struct any_frame>(F_FRAME_BULK_TEST_REPLY);
 }
 
-Bytes usbRead(int side, int revolutions)
+Bytes usbRead(int side, bool synced, nanoseconds_t readTime)
 {
     struct read_frame f = {
         .f = { .type = F_FRAME_READ_CMD, .size = sizeof(f) },
         .side = (uint8_t) side,
-        .revolutions = (uint8_t) revolutions
+        .synced = (uint8_t) synced
     };
+    uint16_t milliseconds = readTime / 1e6;
+    ((uint8_t*)&f.milliseconds)[0] = milliseconds;
+    ((uint8_t*)&f.milliseconds)[1] = milliseconds >> 8;
     usb_cmd_send(&f, f.f.size);
 
     auto fluxmap = std::unique_ptr<Fluxmap>(new Fluxmap);
@@ -253,15 +256,51 @@ void usbErase(int side)
     await_reply<struct any_frame>(F_FRAME_ERASE_REPLY);
 }
 
-void usbSetDrive(int drive, bool high_density)
+void usbSetDrive(int drive, bool high_density, int index_mode)
 {
     usb_init();
 
     struct set_drive_frame f = {
         { .type = F_FRAME_SET_DRIVE_CMD, .size = sizeof(f) },
-        .drive_flags = (uint8_t)((drive ? DRIVE_1 : DRIVE_0) | (high_density ? DRIVE_HD : DRIVE_DD)),
+        .drive = (uint8_t) drive,
+        .high_density = high_density,
+        .index_mode = (uint8_t) index_mode
     };
     usb_cmd_send(&f, f.f.size);
     await_reply<struct any_frame>(F_FRAME_SET_DRIVE_REPLY);
 }
 
+/* Hacky: the board always operates in little-endian mode. */
+static uint16_t read_short_from_usb(uint16_t usb)
+{
+    uint8_t* p = (uint8_t*)&usb;
+    return p[0] | (p[1] << 8);
+}
+
+static void convert_voltages_from_usb(const struct voltages& vin, struct voltages& vout)
+{
+    vout.logic0_mv = read_short_from_usb(vin.logic0_mv);
+    vout.logic1_mv = read_short_from_usb(vin.logic1_mv);
+}
+
+void usbMeasureVoltages(struct voltages_frame* voltages)
+{
+    usb_init();
+
+    struct any_frame f = {
+        { .type = F_FRAME_MEASURE_VOLTAGES_CMD, .size = sizeof(f) },
+    };
+    usb_cmd_send(&f, f.f.size);
+
+    struct voltages_frame* r = await_reply<struct voltages_frame>(F_FRAME_MEASURE_VOLTAGES_REPLY);
+    convert_voltages_from_usb(r->input_both_off, voltages->input_both_off);
+    convert_voltages_from_usb(r->input_drive_0_selected, voltages->input_drive_0_selected);
+    convert_voltages_from_usb(r->input_drive_1_selected, voltages->input_drive_1_selected);
+    convert_voltages_from_usb(r->input_drive_0_running, voltages->input_drive_0_running);
+    convert_voltages_from_usb(r->input_drive_1_running, voltages->input_drive_1_running);
+    convert_voltages_from_usb(r->output_both_off, voltages->output_both_off);
+    convert_voltages_from_usb(r->output_drive_0_selected, voltages->output_drive_0_selected);
+    convert_voltages_from_usb(r->output_drive_1_selected, voltages->output_drive_1_selected);
+    convert_voltages_from_usb(r->output_drive_0_running, voltages->output_drive_0_running);
+    convert_voltages_from_usb(r->output_drive_1_running, voltages->output_drive_1_running);
+}

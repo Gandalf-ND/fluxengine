@@ -29,6 +29,13 @@ the board. Sorry for the inconvenience, but it means you don't have to modify
 the board any more to make it work. If you built the hardware prior to then,
 you'll need to adjust it.
 
+**Another important note.** On 2019-07-03 I've revamped the build process and
+the (command line) user interface. It should be much nicer now, not least in
+that there's a single client binary with all the functionality in it. The
+interface is a little different, but not much. The build process is now
+better (simpler). See [the building](doc/building.md) and
+[using](doc/using.md) pages for more details.
+
 Where?
 ------
 
@@ -52,9 +59,8 @@ following friendly articles:
   - [Using a FluxEngine](doc/using.md) ∾ what to do with your new hardware ∾
     flux files and image files ∾ knowing what you're doing
 
-  - [Reading dubious disks](doc/problems.md) ∾ it's not an exact science ∾
-    the sector map ∾ clock detection and the histogram ∾ tuning the clock ∾
-    manual adjustment
+  - [Troubleshooting dubious disks](doc/problems.md) ∾ it's not an exact science ∾
+    the sector map ∾ clock detection and the histogram
 
 Which?
 ------
@@ -66,21 +72,23 @@ decoder based on Kryoflux (or other) dumps I've found. I don't (yet) have
 real, physical disks in my hand to test the capture process.
 
 Unicorns (🦄) are completely real --- this means that I've read actual,
-physical disks with these formats and so know they work.
+physical disks with these formats and so know they work (or had reports from
+people who've had it work).
 
 ### Old disk formats
 
 | Format                                   | Read? | Write? | Notes |
 |:-----------------------------------------|:-----:|:------:|-------|
-| IBM PC compatible                        |  🦄   |        | and compatibles (like the Atari ST) |
+| [IBM PC compatible](doc/disk-ibm.md)     |  🦄   |        | and compatibles (like the Atari ST) |
 | [Acorn ADFS](doc/disk-acornadfs.md)      |  🦄   |        | single- and double- sided           |
 | [Acorn DFS](doc/disk-acorndfs.md)        |  🦄   |        |                                     |
 | [Ampro Little Board](doc/disk-ampro.md)  |  🦖   |        |                                     |
-| [Apple II DOS 3.3](doc/disk-apple2.md)   |  🦖   |        | doesn't do logical sector remapping |
+| [Apple II DOS 3.3](doc/disk-apple2.md)   |  🦄   |        | doesn't do logical sector remapping |
 | [Amiga](doc/disk-amiga.md)               |  🦄   |        |                                     |
 | [Commodore 64 1541](doc/disk-c64.md)     |  🦖   |        | and probably the other GCR formats  |
 | [Brother 120kB](doc/disk-brother.md)     |  🦄   |        |                                     |
 | [Brother 240kB](doc/disk-brother.md)     |  🦄   |   🦄   |                                     |
+| [Brother FB-100](doc/disk-fb100.md)      |  🦖   |        | Tandy Model 100, Husky Hunter, knitting machines |
 | [Macintosh 800kB](doc/disk-macintosh.md) |  🦖   |        | and probably the 400kB too          |
 | [TRS-80](doc/disk-trs80.md)              |  🦖   |        | a minor variation of the IBM scheme |
 {: .datatable }
@@ -97,9 +105,11 @@ at least, check the CRC so what data's there is probably good.
 |:-----------------------------------------|:-----:|:------:|-------|
 | [AES Superplus / No Problem](doc/disk-aeslanier.md) |  🦖   | | hard sectors! |
 | [Durango F85](doc/disk-durangof85.md)    |  🦖   |        | 5.25" |
+| [DVK MX](doc/disk-mx.md)                 |  🦖   |        | Soviet PDP-11 clone |
 | [Victor 9000](doc/disk-victor9k.md)      |  🦖   |        | 8-inch        |
 | [Zilog MCZ](doc/disk-zilogmcz.md)        |  🦖   |        | 8-inch _and_ hard sectors |
 {: .datatable }
+
 ### Notes
 
   - IBM PC disks are the lowest-common-denominator standard. A number of other
@@ -179,3 +189,8 @@ maintained by Victor Zverovich (`vitaut <https://github.com/vitaut>`) and
 Jonathan Müller (`foonathan <https://github.com/foonathan>`) with
 contributions from many other people. It is licensed under the terms of the
 BSD license. Please see the contents of the directory for the full text.
+
+As an exception, `dep/emu` contains parts of the OpenBSD C library
+code, Todd Miller and William A. Rowe (and probably others). It is licensed
+under the terms of the 3-clause BSD license. Please see the contents of the
+directory for the full text. It's been lightly modified by me.

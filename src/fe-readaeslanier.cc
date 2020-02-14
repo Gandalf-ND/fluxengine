@@ -2,27 +2,25 @@
 #include "flags.h"
 #include "reader.h"
 #include "fluxmap.h"
-#include "decoders.h"
+#include "decoders/decoders.h"
 #include "image.h"
 #include "sector.h"
 #include "sectorset.h"
 #include "record.h"
-#include "aeslanier.h"
-#include <fmt/format.h>
+#include "aeslanier/aeslanier.h"
+#include "fmt/format.h"
 
-static StringFlag outputFilename(
-    { "--output", "-o" },
-    "The output image file to write to.",
-    "aeslanier.img");
+static FlagGroup flags { &readerFlags };
 
-int main(int argc, const char* argv[])
+int mainReadAESLanier(int argc, const char* argv[])
 {
 	setReaderDefaultSource(":t=0-79:s=0");
+	setReaderDefaultOutput("aeslanier.img");
     setReaderRevolutions(2);
-    Flag::parseFlags(argc, argv);
+    flags.parseFlags(argc, argv);
 
 	AesLanierDecoder decoder;
-	readDiskCommand(decoder, outputFilename);
+	readDiskCommand(decoder);
     return 0;
 }
 

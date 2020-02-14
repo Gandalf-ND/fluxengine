@@ -20,6 +20,7 @@ static void update_version_1_to_2()
             if (b < 0x80)
             {
                 after.appendInterval(b + pending);
+                after.appendPulse();
                 pending = 0;
             }
             else
@@ -32,7 +33,7 @@ static void update_version_1_to_2()
     std::cout << std::endl;
 }
 
-int main(int argc, const char* argv[])
+int mainUpgradeFluxFile(int argc, const char* argv[])
 {
     if (argc != 2)
         Error() << "syntax: fe-upgradefluxfile <fluxfile>";

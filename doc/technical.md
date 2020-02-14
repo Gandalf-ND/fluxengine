@@ -13,9 +13,9 @@ Verilog turns the timer, pulse and index information into a bytecode stream
 which encodes intervals, pulses, and whether the index hole has been seen.
 
 This is then streamed back to the PC, where offline software decodes it: it
-does simple statistical analysis to guess the clock rate, then turns the
-pulses into a nice, lined up bit array and from there decodes the file system
-format.
+searches for known bit patterns (which depend on the format), uses those to
+determine the clock rate, and then turns the pulses into a nice, lined up bit
+array and from there decodes the file system format.
 
 Writing back to disk works the same way: bytes are streamed to the
 FluxEngine, where a different datapath state machine thingy (the PSoC5LP has
@@ -24,7 +24,9 @@ stream of pulses to the disk.
 
 The bytecode format represents an interval between pulses as a byte, a pulse
 as a byte, and the index hole as a byte. Timer overflows are handled by
-sending multiple intervals in a row.
+sending multiple intervals in a row. However, the USB transport applies a
+simple compression system to this in order to get the USB bandwidth down to
+something manageable.
 
 An HD floppy has a nominal pulse frequency of 500kHz, and we use a sample
 clock of 12MHz (every 83ns). This means that our 500kHz pulses will have an
@@ -57,53 +59,42 @@ Some useful and/or interesting numbers:
 
 ## Why don't I use an Arduino / STM32 / ESP32 / Raspberry Pi / etc?
 
-I've got a _lot_ of questions on this, and multiple Github issues of people
+-I've got a _lot_ of questions on this, and multiple Github issues of people
 debating it. It's complicated, but it's essentially a tradeoff between speed
-and complexity.
+and complexity.-
 
-FluxEngine's read process involves generating a lot of data using a fairly
-brute force sampling approach --- about 150kB per disk revolution, and
-sometimes it needs to record multiple revolutions. Most microcontrollers
-don't have enough RAM to buffer this, so instead I have to stream it over USB
-back to the host PC in real time. The disk won't wait, so I need to stream data faster
-than the disk is producing it: the total is about 800kB/s.
+**Update as of 2020-01-08:**
 
-Handling USB is pretty CPU-hungry, so my candidate microntroller has to be
-able to cope with the ruinously strict real-time requirements of the
-sampler's 12MHz clock as well as keeping up with 13,000 USB interrupts a
-second (one for each 64-byte frame) in order to transfer the data.
+Right. Well.
 
-The Atmels and STM32s I found were perfectly capable of doing the real-time
-sampling, using hand-tool assembly, but I very much doubt whether they could
-do the USB streaming as well (although I'd like to move away from the Cypress
-onto something less proprietary and easier to source, so I'd like to be
-proven wrong here).
+This section used to have a long explanation as to why these other platforms
+were unsuitable --- essentially, they're generally missing out on either the
+realtimeness to sample the data correctly (Raspberry Pi) or enough CPU to
+stream the data over USB while also sampling it (Arduino).
 
-The Raspberry Pi easily has enough processing power and memory, but it's also
-got terrible GPIO pin read performance --- [about
-1kHz](https://raspberrypi.stackexchange.com/questions/9646/how-fast-is-gpiodma-multi-i2s-input/10197#10197).
-That's a long way from the 12MHz I need.
+This is correct, but it turns out that the STM32 has some built-in features
+which support the FluxEngine's use case almost exactly: you can configure the
+DMA engine to sample the interval between pulses and write them directly into
+memory, and you can configure the PWM engine the read samples from memory and
+use them to time pulses to the output. There's a bit less functionality, so you
+can't do things like measure the signal voltages, and they're less convenient
+as you need an adapter cable or board, but this will allow you to replicate the
+FluxEngine hardware on a $2 Blue Pill.
 
-The PSoC5LP part I'm using has enough CPU to handle the USB side of things,
-and it _also_ has a whole set of FPGA-like soft programmable features,
-including 24 mini-ALU systems that are ideally suited to exactly this kind of
-sampling. I can read the disk and generate the byte stream describing the
-flux pattern entirely in 'hardware', without involving the main CPU at all.
-This is then DMAed directly into a set of ring buffers read for the USB
-system to pick up and relay back to the PC. It's incredibly simple and works
-well. (The same applies to writing flux back onto the disk.)
+I am _not_ planning on replacing the PSoC5 with a Blue Pill, because someone
+already has: [the GreaseWeazle](https://github.com/keirf/Greaseweazle/wiki) is
+a completely open source firmware package which will read and write Supercard
+Pro files via a standard Blue Pill. The GreaseWeazle's USB protocol is
+different from the FluxEngine's so they're not directly interchangeable. You
+can, however, read a Supercard Pro file with a GreaseWeazle and then use the
+FluxEngine client to decode it. It should work the other way around, too, but
+FluxEngine's SCP export [is curently
+broken](https://github.com/davidgiven/fluxengine/issues/134).
 
-The development board I'm using, the
-[CY8CKIT-059](https://www.cypress.com/documentation/development-kitsboards/cy8ckit-059-psoc-5lp-prototyping-kit-onboard-programmer-and),
-also has another big advantage: it's the right shape. It's got 17 holes in a
-row connected to GPIO pins, and it's a native 5V part, which means I can just
-connect a floppy drive connector directly to the board without needing to
-build any hardware. No adapter board, no level shifting, no special cable,
-nothing. This makes the FluxEngine hardware incredibly easy to assemble,
-which therefore means cheap.
+I _am_ considering adding direct support for the GreaseWeazle to the FluxEngine
+client, which will let you just plug one in and make it go as a direct
+replacement to the FluxEngine hardware.
 
-Speaking of which, the CY8CKIT-059 is $10. (Before shipping, which is
-admittedly expensive.)
 
 ### Some useful links
 
@@ -114,8 +105,16 @@ admittedly expensive.)
 
   - [The TEAC FD-05HF-8830 data
     sheet](https://hxc2001.com/download/datasheet/floppy/thirdparty/Teac/TEAC%20FD-05HF-8830.pdf):
-    the technical data sheet for a representative drive. Lots of useful
+    the technical data sheet for a representative 3.5" drive. Lots of useful
     timing numbers here.
+
+  - [The Mitsubishi M4851 data
+    sheet](http://www.bitsavers.org/pdf/mitsubishi/floppy/M4851/TJ2-G30211A_M4851_DSHH_48TPI_OEM_Manual_Nov83.pdf):
+    the equivalent data sheet for a representative 5.25" drive.
+
+  - [The DRG Business Machines YD-174 manual](https://electrickery.hosting.philpem.me.uk/comp/divcomp/doc/YE_Data_YD-174_8inchFloppyDriveTechnicalManual.pdf):
+	the equivalent manual (data sheets hadn't been invented then) for a
+	representative 8" drive.
 
   - [KryoFlux stream file
     documentation](https://www.kryoflux.com/download/kryoflux_stream_protocol_rev1.1.pdf):
